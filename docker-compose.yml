@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: fantasy_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://fantasy_user:fantasy_pass@db:5432/fantasy_db
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=your-secret-key-change-this
+      - FIRST_SUPERUSER=admin@example.com
+      - FIRST_SUPERUSER_PASSWORD=changethis
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build: ./frontend
+    container_name: fantasy_frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://fantasy.local
+    command: npm run dev
+
+  db:
+    image: postgres:15-alpine
+    container_name: fantasy_db
+    environment:
+      - POSTGRES_USER=fantasy_user
+      - POSTGRES_PASSWORD=fantasy_pass
+      - POSTGRES_DB=fantasy_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: fantasy_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  nginx:
+    build: ./nginx
+    container_name: fantasy_nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - frontend
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+
+volumes:
+  postgres_data:
+  redis_data:
