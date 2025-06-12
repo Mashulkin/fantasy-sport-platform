@@ -34,15 +34,24 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async fetchUser() {
+async fetchUser() {
+      if (!this.token) {
+        console.log('No token, cannot fetch user')
+        return
+      }
+      
       try {
         const response = await authAPI.getMe()
         this.user = response.data
         this.isAuthenticated = true
-        console.log('User data:', this.user)
+        console.log('User fetched:', this.user)
       } catch (error) {
         console.error('Fetch user error:', error)
-        this.logout()
+        if (error.response?.status === 401) {
+          // Token is invalid
+          this.logout()
+        }
+        throw error
       }
     },
 

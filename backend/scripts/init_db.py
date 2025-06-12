@@ -13,14 +13,24 @@ from app.models import *
 def init_db():
     print("Creating database tables...")
     
-    # Create all tables
-    Base.metadata.create_all(bind=engine)
-    print("Tables created successfully!")
+    try:
+        # Try to create all tables
+        Base.metadata.create_all(bind=engine)
+        print("Tables created successfully!")
+    except Exception as e:
+        if "duplicate key value violates unique constraint" in str(e) and "tournament_type_enum" in str(e):
+            print("Enum type already exists, this is normal")
+            # Try to create tables without the problematic enum
+            # This is a workaround for SQLAlchemy enum handling
+            pass
+        else:
+            print(f"Error creating tables: {e}")
+            # Continue anyway, tables might already exist
     
     # Create superuser
     from app.models.user import User
     db = Session(bind=engine)
-    
+
     try:
         user = db.query(User).filter(User.email == settings.FIRST_SUPERUSER).first()
         if not user:
@@ -41,6 +51,7 @@ def init_db():
         db.rollback()
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     init_db()

@@ -12,12 +12,50 @@ services:
       - SECRET_KEY=your-secret-key-change-this
       - FIRST_SUPERUSER=admin@example.com
       - FIRST_SUPERUSER_PASSWORD=changethis
+      - TZ=Europe/Moscow
     depends_on:
       - db
       - redis
     volumes:
       - ./backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  celery_worker:
+    build: ./backend
+    container_name: fantasy_celery_worker
+    environment:
+      - DATABASE_URL=postgresql://fantasy_user:fantasy_pass@db:5432/fantasy_db
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=your-secret-key-change-this
+      - FIRST_SUPERUSER=admin@example.com
+      - FIRST_SUPERUSER_PASSWORD=changethis
+      - TZ=Europe/Moscow
+    depends_on:
+      - db
+      - redis
+      - backend
+    volumes:
+      - ./backend:/app
+    command: celery -A app.worker worker --loglevel=info --pool=solo
+
+  celery_beat:
+    build: ./backend
+    container_name: fantasy_celery_beat
+    environment:
+      - DATABASE_URL=postgresql://fantasy_user:fantasy_pass@db:5432/fantasy_db
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=your-secret-key-change-this
+      - FIRST_SUPERUSER=admin@example.com
+      - FIRST_SUPERUSER_PASSWORD=changethis
+      - TZ=Europe/Moscow
+    depends_on:
+      - db
+      - redis
+      - backend
+      - celery_worker
+    volumes:
+      - ./backend:/app
+    command: celery -A app.worker beat --loglevel=info -s /tmp/celerybeat-schedule
 
   frontend:
     build: ./frontend
@@ -50,6 +88,25 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+
+  flower:
+    build: ./backend
+    container_name: fantasy_flower
+    ports:
+      - "5555:5555"
+    environment:
+      - DATABASE_URL=postgresql://fantasy_user:fantasy_pass@db:5432/fantasy_db
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=your-secret-key-change-this
+      - FIRST_SUPERUSER=admin@example.com
+      - FIRST_SUPERUSER_PASSWORD=changethis
+      - TZ=Europe/Moscow
+    depends_on:
+      - redis
+      - celery_worker
+    volumes:
+      - ./backend:/app
+    command: celery -A app.worker flower --port=5555
 
   nginx:
     build: ./nginx

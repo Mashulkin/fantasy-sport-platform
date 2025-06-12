@@ -55,3 +55,4 @@ class ParserRunResponse(BaseModel):
     parser_id: int
     parser_name: str
     started_at: datetime
+    task_id: Optional[str] = None

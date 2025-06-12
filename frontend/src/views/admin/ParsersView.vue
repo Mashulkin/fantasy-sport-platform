@@ -219,22 +219,93 @@ const fetchParserTypes = async () => {
 }
 
 const runParser = async (parser) => {
+  console.log(`Starting parser ${parser.name} (ID: ${parser.id})`)
   runningParsers.value.push(parser.id)
+  let checkInterval = null
+  let timeoutId = null
+  
   try {
-    await apiClient.post(`/parsers/${parser.id}/run`)
-    // Show success message
-    console.log(`Parser ${parser.name} started`)
-  } catch (error) {
-    console.error('Failed to run parser:', error)
-  } finally {
-    // Remove from running list after 5 seconds
-    setTimeout(() => {
+    const response = await apiClient.post(`/parsers/${parser.id}/run`)
+    const { task_id } = response.data
+    
+    console.log(`Parser ${parser.name} started with task ID: ${task_id}`)
+    
+    // Check task status periodically
+    let checkCount = 0
+    checkInterval = setInterval(async () => {
+      checkCount++
+      try {
+        const statusResponse = await apiClient.get(`/parsers/task/${task_id}/status`)
+        const { status, ready, successful, failed } = statusResponse.data
+        
+        console.log(`Check #${checkCount} - Task ${task_id} status:`, {
+          status,
+          ready,
+          successful,
+          failed
+        })
+        
+        if (ready) {
+          console.log(`Task ${task_id} completed. Cleaning up...`)
+          
+          // Clear intervals and remove from running list
+          if (checkInterval) {
+            clearInterval(checkInterval)
+            checkInterval = null
+          }
+          if (timeoutId) {
+            clearTimeout(timeoutId)
+            timeoutId = null
+          }
+          
+          const index = runningParsers.value.indexOf(parser.id)
+          if (index > -1) {
+            runningParsers.value.splice(index, 1)
+            console.log(`Removed parser ${parser.id} from running list`)
+          }
+          
+          if (successful) {
+            console.log(`Parser ${parser.name} completed successfully`)
+          } else if (failed) {
+            console.error(`Parser ${parser.name} failed`)
+          }
+          
+          // Refresh parsers data
+          console.log('Refreshing parsers data...')
+          await fetchParsers()
+        }
+      } catch (error) {
+        console.error(`Error checking task status (attempt ${checkCount}):`, error)
+        // Don't clear interval here, let timeout handle it
+      }
+    }, 2000) // Check every 2 seconds
+    
+    // Stop checking after 5 minutes and ensure spinner is removed
+    timeoutId = setTimeout(() => {
+      console.log(`Timeout reached for parser ${parser.name}. Stopping status checks.`)
+      
+      if (checkInterval) {
+        clearInterval(checkInterval)
+        checkInterval = null
+      }
+      
       const index = runningParsers.value.indexOf(parser.id)
       if (index > -1) {
         runningParsers.value.splice(index, 1)
+        console.log(`Removed parser ${parser.id} from running list due to timeout`)
       }
-      fetchParsers() // Refresh data
-    }, 5000)
+      
+      // Refresh data
+      fetchParsers()
+    }, 300000) // 5 minutes
+    
+  } catch (error) {
+    console.error('Failed to start parser:', error)
+    // Ensure we remove from running list on error
+    const index = runningParsers.value.indexOf(parser.id)
+    if (index > -1) {
+      runningParsers.value.splice(index, 1)
+    }
   }
 }
 

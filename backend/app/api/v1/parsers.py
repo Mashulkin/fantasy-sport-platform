@@ -1,6 +1,6 @@
 from typing import List, Any
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
@@ -87,7 +87,6 @@ async def run_parser(
     *,
     db: Session = Depends(deps.get_db),
     parser_id: int,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(deps.get_current_active_superuser),
 ) -> Any:
     """Run parser manually"""
@@ -98,18 +97,47 @@ async def run_parser(
     if not parser.is_active:
         raise HTTPException(status_code=400, detail="Parser is not active")
     
-    # Запускаем парсер в фоне
-    background_tasks.add_task(
-        ParserService.run_parser,
-        parser_id,
-        db
-    )
+    # Import here to avoid circular import
+    from app.tasks import run_parser_task
+    
+    # Запускаем парсер через Celery
+    task = run_parser_task.delay(parser_id)
     
     return {
         "status": "started",
         "parser_id": parser_id,
         "parser_name": parser.name,
-        "started_at": datetime.now()
+        "started_at": datetime.now(),
+        "task_id": task.id
+    }
+
+
+@router.get("/task/{task_id}/status")
+def get_task_status(
+    task_id: str,
+    current_user: User = Depends(deps.get_current_active_superuser),
+) -> Any:
+    """Get status of a Celery task"""
+    from app.core.celery_app import celery_app
+    
+    task = celery_app.AsyncResult(task_id)
+    
+    # Get the actual status
+    status = task.status
+    result = task.result if task.ready() else None
+    
+    # Celery statuses: PENDING, STARTED, SUCCESS, FAILURE, RETRY, REVOKED
+    ready = status in ['SUCCESS', 'FAILURE', 'REVOKED']
+    successful = status == 'SUCCESS'
+    failed = status == 'FAILURE'
+    
+    return {
+        "task_id": task_id,
+        "status": status,
+        "result": result,
+        "ready": ready,
+        "successful": successful,
+        "failed": failed
     }
 
 
@@ -144,5 +172,9 @@ def delete_parser(
     
     db.delete(parser)
     db.commit()
+    
+    # Update Celery schedules
+    from app.tasks import update_parser_schedules
+    update_parser_schedules.delay()
     
     return {"status": "deleted"}
