@@ -1,25 +1,41 @@
+"""
+Database connection and session management.
+
+This module sets up SQLAlchemy engine, session factory, and base model class
+for the application's PostgreSQL database.
+"""
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
-# Create engine
+# Create database engine with connection pooling
 engine = create_engine(
     settings.DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20
+    pool_pre_ping=True,  # Validate connections before use
+    pool_size=10,        # Number of connections to maintain
+    max_overflow=20      # Additional connections when pool is full
 )
 
-# Create session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Session factory for database operations
+SessionLocal = sessionmaker(
+    autocommit=False, 
+    autoflush=False, 
+    bind=engine
+)
 
-# Base class for models
+# Base class for all SQLAlchemy models
 Base = declarative_base()
 
 
-# Dependency to get DB session
 def get_db():
+    """
+    Database session dependency for FastAPI.
+    
+    Yields:
+        Session: SQLAlchemy database session
+    """
     db = SessionLocal()
     try:
         yield db

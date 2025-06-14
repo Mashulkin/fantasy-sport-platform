@@ -1,3 +1,10 @@
+"""
+Superuser creation and management script.
+
+Creates or updates the superuser account with current environment settings.
+Useful for resetting admin access or updating credentials.
+"""
+
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -7,7 +14,9 @@ from app.core.config import settings
 from app.core.security import get_password_hash
 from app.models.user import User
 
+
 def create_superuser():
+    """Create or update superuser account."""
     db = SessionLocal()
     
     email = settings.FIRST_SUPERUSER
@@ -41,13 +50,14 @@ def create_superuser():
     print(f"  Email: {email}")
     print(f"  Password: {password}")
     
-    # Show all users
+    # Show all users for verification
     print("\nAll users in database:")
     all_users = db.query(User).all()
     for u in all_users:
         print(f"  - {u.email} (superuser: {u.is_superuser}, active: {u.is_active})")
     
     db.close()
+
 
 if __name__ == "__main__":
     create_superuser()

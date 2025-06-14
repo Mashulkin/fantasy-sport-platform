@@ -1,3 +1,10 @@
+"""
+PostgreSQL enum type conflict resolver.
+
+Fixes conflicts that can arise with SQLAlchemy enum types during migrations.
+Run this if you encounter enum-related errors during database setup.
+"""
+
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -5,15 +12,16 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sqlalchemy import text
 from app.core.database import engine
 
+
 def fix_enum_types():
-    """Drop and recreate enum types to fix conflicts"""
+    """Drop and recreate conflicting enum types."""
     
     with engine.connect() as conn:
-        # Start transaction
+        # Start transaction for atomic operation
         trans = conn.begin()
         
         try:
-            # Check if enum exists
+            # Check if problematic enum exists
             result = conn.execute(text("""
                 SELECT EXISTS (
                     SELECT 1 FROM pg_type WHERE typname = 'tournament_type_enum'
@@ -32,7 +40,7 @@ def fix_enum_types():
                 usage_count = result.scalar()
                 
                 if usage_count == 0:
-                    # Safe to drop
+                    # Safe to drop unused enum
                     print("Enum not in use, dropping...")
                     conn.execute(text("DROP TYPE IF EXISTS tournament_type_enum CASCADE;"))
                     print("Enum dropped successfully")
@@ -46,6 +54,7 @@ def fix_enum_types():
             trans.rollback()
             print(f"Error fixing enum: {e}")
             raise
+
 
 if __name__ == "__main__":
     fix_enum_types()
