@@ -13,6 +13,7 @@ services:
       - FIRST_SUPERUSER=admin@example.com
       - FIRST_SUPERUSER_PASSWORD=changethis
       - TZ=Europe/Moscow
+      - PYTHONUNBUFFERED=1
     depends_on:
       - db
       - redis
@@ -30,13 +31,14 @@ services:
       - FIRST_SUPERUSER=admin@example.com
       - FIRST_SUPERUSER_PASSWORD=changethis
       - TZ=Europe/Moscow
+      - PYTHONUNBUFFERED=1
     depends_on:
       - db
       - redis
       - backend
     volumes:
       - ./backend:/app
-    command: celery -A app.worker worker --loglevel=info --pool=solo
+    command: celery -A app.worker worker --loglevel=info --pool=solo --max-tasks-per-child=10
 
   celery_beat:
     build: ./backend
@@ -48,6 +50,7 @@ services:
       - FIRST_SUPERUSER=admin@example.com
       - FIRST_SUPERUSER_PASSWORD=changethis
       - TZ=Europe/Moscow
+      - PYTHONUNBUFFERED=1
     depends_on:
       - db
       - redis
@@ -55,7 +58,8 @@ services:
       - celery_worker
     volumes:
       - ./backend:/app
-    command: celery -A app.worker beat --loglevel=info -s /tmp/celerybeat-schedule
+      - celery_beat_data:/tmp
+    command: celery -A app.worker beat --loglevel=info -s /tmp/celerybeat-schedule --pidfile=/tmp/celerybeat.pid
 
   frontend:
     build: ./frontend
@@ -101,6 +105,7 @@ services:
       - FIRST_SUPERUSER=admin@example.com
       - FIRST_SUPERUSER_PASSWORD=changethis
       - TZ=Europe/Moscow
+      - PYTHONUNBUFFERED=1
     depends_on:
       - redis
       - celery_worker
@@ -122,3 +127,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  celery_beat_data:

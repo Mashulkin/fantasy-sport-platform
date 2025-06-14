@@ -8,10 +8,9 @@ from app.core.celery_app import celery_app
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
-# Import tasks to register them
+# Import only production tasks (без test_task)
 from app.tasks import (
     run_parser_task,
-    update_parser_schedules,
     check_parser_health
 )
 
