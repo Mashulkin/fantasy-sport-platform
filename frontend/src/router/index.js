@@ -1,3 +1,10 @@
+/**
+ * Vue Router configuration for client-side navigation.
+ * 
+ * Defines all application routes including public pages,
+ * admin routes with layout guards, and lazy-loaded components.
+ */
+
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 
@@ -30,6 +37,7 @@ const router = createRouter({
       component: () => import('../views/StatisticsView.vue')
     },
     {
+      // Admin routes with authentication guard
       path: '/admin',
       component: () => import('../layouts/AdminLayout.vue'),
       children: [

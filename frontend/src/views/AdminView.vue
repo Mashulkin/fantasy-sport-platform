@@ -1,8 +1,15 @@
+<!--
+  Admin panel dashboard with management options.
+  
+  Provides navigation to different admin functions
+  including parser management and data upload.
+-->
 <template>
   <div>
     <h1 class="text-h3 mb-4">Admin Panel</h1>
     
     <v-row>
+      <!-- Parser management card -->
       <v-col cols="12" md="6">
         <v-card to="/admin/parsers" class="pa-4">
           <v-card-title>
@@ -15,6 +22,7 @@
         </v-card>
       </v-col>
       
+      <!-- CSV upload card -->
       <v-col cols="12" md="6">
         <v-card to="/admin/upload" class="pa-4">
           <v-card-title>
@@ -31,4 +39,5 @@
 </template>
 
 <script setup>
+// No script logic needed for this simple navigation component
 </script>

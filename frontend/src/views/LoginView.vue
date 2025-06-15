@@ -1,8 +1,15 @@
+<!--
+  User authentication login page.
+  
+  Provides login form with validation and error handling
+  for user authentication via email or username.
+-->
 <template>
   <v-container class="fill-height" fluid>
     <v-row align="center" justify="center">
       <v-col cols="12" sm="8" md="4">
         <v-card>
+          <!-- Login form header -->
           <v-card-title class="text-h5 text-center">
             Fantasy Sports Platform
           </v-card-title>
@@ -11,7 +18,9 @@
           </v-card-subtitle>
           
           <v-card-text>
+            <!-- Login form -->
             <v-form @submit.prevent="handleLogin">
+              <!-- Username/email input -->
               <v-text-field
                 v-model="credentials.username"
                 label="Email or Username"
@@ -20,6 +29,7 @@
                 required
               ></v-text-field>
               
+              <!-- Password input with toggle visibility -->
               <v-text-field
                 v-model="credentials.password"
                 label="Password"
@@ -31,6 +41,7 @@
                 required
               ></v-text-field>
               
+              <!-- Error message display -->
               <v-alert
                 v-if="error"
                 type="error"
@@ -40,6 +51,7 @@
                 {{ error }}
               </v-alert>
               
+              <!-- Submit button -->
               <v-btn
                 type="submit"
                 block
@@ -52,6 +64,7 @@
             </v-form>
           </v-card-text>
           
+          <!-- Registration link -->
           <v-card-actions>
             <v-spacer></v-spacer>
             <v-btn text to="/register">
@@ -72,15 +85,21 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const authStore = useAuthStore()
 
+// Component state
 const showPassword = ref(false)
 const loading = ref(false)
 const error = ref('')
 
+// Form data
 const credentials = ref({
   username: '',
   password: ''
 })
 
+/**
+ * Handle login form submission.
+ * Attempts to authenticate user and redirect on success.
+ */
 const handleLogin = async () => {
   loading.value = true
   error.value = ''

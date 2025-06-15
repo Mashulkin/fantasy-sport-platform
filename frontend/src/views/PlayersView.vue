@@ -1,6 +1,12 @@
+<!--
+  Players management and display component.
+  
+  Provides comprehensive player data table with filtering, searching,
+  sorting, and detailed statistics. Supports multiple fantasy platforms.
+-->
 <template>
   <div>
-    <!-- Debug Panel -->
+    <!-- Debug panel for development (hidden in production) -->
     <v-expansion-panels class="mb-4" v-if="showDebug">
       <v-expansion-panel>
         <v-expansion-panel-title>Debug Info</v-expansion-panel-title>
@@ -14,10 +20,11 @@
       </v-expansion-panel>
     </v-expansion-panels>
 
-    <!-- Filters Card -->
+    <!-- Filter controls section -->
     <v-card class="mb-4" elevation="0" color="grey-lighten-5">
       <v-card-text>
         <v-row align="center">
+          <!-- Search input -->
           <v-col cols="12" md="4">
             <v-text-field
               v-model="search"
@@ -31,6 +38,7 @@
             ></v-text-field>
           </v-col>
           
+          <!-- Position filter -->
           <v-col cols="6" md="2">
             <v-select
               v-model="filterPosition"
@@ -47,6 +55,7 @@
             ></v-select>
           </v-col>
           
+          <!-- Team filter -->
           <v-col cols="6" md="2">
             <v-select
               v-model="filterTeam"
@@ -65,6 +74,7 @@
             ></v-select>
           </v-col>
           
+          <!-- Status filter -->
           <v-col cols="6" md="2">
             <v-select
               v-model="filterStatus"
@@ -80,6 +90,7 @@
             ></v-select>
           </v-col>
           
+          <!-- Reset filters button -->
           <v-col cols="6" md="2">
             <v-btn
               variant="outlined"
@@ -94,7 +105,7 @@
       </v-card-text>
     </v-card>
 
-    <!-- Players Table -->
+    <!-- Players data table -->
     <v-card>
       <v-data-table
         :headers="simpleHeaders"
@@ -105,7 +116,7 @@
         class="modern-table"
         hover
       >
-        <!-- Name with tooltip -->
+        <!-- Player name with tooltip showing full name -->
         <template v-slot:item.web_name="{ item }">
           <v-tooltip location="bottom">
             <template v-slot:activator="{ props }">
@@ -117,7 +128,7 @@
           </v-tooltip>
         </template>
         
-        <!-- Team with tooltip -->
+        <!-- Team with tooltip showing full team name -->
         <template v-slot:item.team="{ item }">
           <v-tooltip location="bottom">
             <template v-slot:activator="{ props }">
@@ -133,7 +144,7 @@
           </v-tooltip>
         </template>
         
-        <!-- Position with modern chip -->
+        <!-- Position with color-coded chip -->
         <template v-slot:item.position="{ item }">
           <v-chip 
             size="small" 
@@ -144,7 +155,7 @@
           </v-chip>
         </template>
         
-        <!-- Status with better icons -->
+        <!-- Status with icon indicators -->
         <template v-slot:item.status="{ item }">
           <v-tooltip location="bottom" v-if="item.status !== 'a'">
             <template v-slot:activator="{ props }">
@@ -160,12 +171,12 @@
           </v-tooltip>
         </template>
         
-        <!-- Cost with currency -->
+        <!-- Cost with currency formatting -->
         <template v-slot:item.cost="{ item }">
           <span class="font-weight-medium">£{{ item.cost }}</span>
         </template>
         
-        <!-- Ownership with progress -->
+        <!-- Ownership with progress bar -->
         <template v-slot:item.ownership="{ item }">
           <div style="min-width: 80px">
             <div class="text-caption">{{ item.ownership }}%</div>
@@ -177,7 +188,7 @@
           </div>
         </template>
         
-        <!-- Form with gradient chip -->
+        <!-- Form with color-coded rating -->
         <template v-slot:item.form="{ item }">
           <v-chip 
             size="small" 
@@ -188,12 +199,12 @@
           </v-chip>
         </template>
         
-        <!-- Points with emphasis -->
+        <!-- Total points with emphasis -->
         <template v-slot:item.total_points="{ item }">
           <span class="font-weight-bold text-h6">{{ item.total_points }}</span>
         </template>
         
-        <!-- Event Points -->
+        <!-- Recent gameweek points -->
         <template v-slot:item.event_points="{ item }">
           <v-chip
             v-if="item.event_points > 0"
@@ -208,9 +219,15 @@
       </v-data-table>
     </v-card>
     
-    <!-- Statistics Cards -->
+    <!-- Statistics summary cards -->
     <v-row class="mt-4">
-      <v-col v-for="stat in statistics" :key="stat.title" cols="12" sm="6" md="3">
+      <v-col 
+        v-for="stat in statistics" 
+        :key="stat.title" 
+        cols="12" 
+        sm="6" 
+        md="3"
+      >
         <v-card>
           <v-card-text class="d-flex align-center justify-space-between">
             <div>
@@ -229,9 +246,10 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import apiClient, { playersAPI, teamsAPI } from '@/api/client'
 
-// Debug mode
+// Development debug mode toggle
 const showDebug = ref(false)
 
+// Component state
 const loading = ref(false)
 const players = ref([])
 const teams = ref([])
@@ -241,6 +259,7 @@ const filterTeam = ref([])
 const filterStatus = ref(null)
 const totalPlayers = ref(0)
 
+// Filter options
 const positions = ['GK', 'DEF', 'MID', 'FWD']
 const statuses = [
   { text: 'Available', value: 'a' },
@@ -249,10 +268,9 @@ const statuses = [
   { text: 'Suspended', value: 's' }
 ]
 
-// Сортировка
+// Table configuration
 const sortBy = ref([{ key: 'total_points', order: 'desc' }])
 
-// Простые заголовки без кастомных функций
 const simpleHeaders = [
   { title: 'Name', key: 'web_name', sortable: true },
   { title: 'Team', key: 'team', sortable: true },
@@ -265,7 +283,10 @@ const simpleHeaders = [
   { title: 'GW', key: 'event_points', sortable: true }
 ]
 
-// Преобразуем данные в плоскую структуру для таблицы
+/**
+ * Transform player data for table display with filtering applied.
+ * @returns {Array} Processed and filtered player data
+ */
 const tableData = computed(() => {
   console.log('Computing tableData...')
   
@@ -273,13 +294,13 @@ const tableData = computed(() => {
     const profile = getFPLProfile(player)
     
     return {
-      // Основные данные игрока
+      // Core player data
       id: player.id,
       web_name: player.web_name || '',
       first_name: player.first_name || '',
       last_name: player.last_name || '',
       
-      // Данные из профиля
+      // Platform profile data
       team: profile?.team?.abbreviation || '-',
       team_name: profile?.team?.name || '-',
       position: profile?.player_position || '-',
@@ -290,25 +311,28 @@ const tableData = computed(() => {
       total_points: profile?.total_points || 0,
       event_points: profile?.event_points || 0,
       
-      // Для фильтров
+      // Filter helper fields
       team_id: profile?.team_id,
       platform_player_id: profile?.platform_player_id
     }
   })
 
-  // Применяем фильтры
+  // Apply position filter
   if (filterPosition.value && filterPosition.value.length > 0) {
     result = result.filter(p => filterPosition.value.includes(p.position))
   }
 
+  // Apply team filter
   if (filterTeam.value && filterTeam.value.length > 0) {
     result = result.filter(p => filterTeam.value.includes(p.team_id))
   }
 
+  // Apply status filter
   if (filterStatus.value) {
     result = result.filter(p => p.status === filterStatus.value)
   }
 
+  // Apply text search
   if (search.value) {
     const searchLower = search.value.toLowerCase()
     result = result.filter(p => 
@@ -322,15 +346,13 @@ const tableData = computed(() => {
   return result
 })
 
-// Для отладки - следим за изменениями sortBy
-watch(sortBy, (newVal) => {
-  console.log('Sort changed:', newVal)
-}, { deep: true })
-
-// Отображаемые игроки (устарело, теперь используем tableData)
+// Alias for backward compatibility
 const displayPlayers = computed(() => tableData.value)
 
-// Статистика
+/**
+ * Calculate statistics from current player data.
+ * @returns {Array} Statistics objects for display cards
+ */
 const statistics = computed(() => [
   {
     title: 'Total Players',
@@ -358,7 +380,7 @@ const statistics = computed(() => [
   }
 ])
 
-// Computed для статистики
+// Statistics calculations
 const injuredPlayers = computed(() => {
   return tableData.value.filter(p => p.status === 'i').length
 })
@@ -367,6 +389,9 @@ const topFormPlayers = computed(() => {
   return tableData.value.filter(p => p.form >= 7).length
 })
 
+/**
+ * Fetch players data from API.
+ */
 const fetchPlayers = async () => {
   loading.value = true
   try {
@@ -377,7 +402,7 @@ const fetchPlayers = async () => {
     console.log('Players fetched:', response.data.length)
     players.value = response.data || []
     
-    // Get count
+    // Fetch total count for statistics
     try {
       const countResponse = await apiClient.get('/players/count', {
         params: { platform: 'FPL' }
@@ -394,6 +419,9 @@ const fetchPlayers = async () => {
   }
 }
 
+/**
+ * Fetch teams data from API.
+ */
 const fetchTeams = async () => {
   try {
     const response = await teamsAPI.getAll()
@@ -403,7 +431,11 @@ const fetchTeams = async () => {
   }
 }
 
-// Вспомогательные функции
+/**
+ * Get FPL platform profile for a player.
+ * @param {Object} player - Player object
+ * @returns {Object|null} FPL profile or null
+ */
 const getFPLProfile = (player) => {
   if (!player || !player.platform_profiles || player.platform_profiles.length === 0) {
     return null
@@ -411,7 +443,13 @@ const getFPLProfile = (player) => {
   return player.platform_profiles.find(p => p.platform === 'FPL')
 }
 
-// Функции для UI
+// UI helper functions for styling
+
+/**
+ * Get color for player position chip.
+ * @param {string} position - Player position
+ * @returns {string} Vuetify color name
+ */
 const getPositionColor = (position) => {
   switch (position) {
     case 'GK': return 'amber'
@@ -422,6 +460,11 @@ const getPositionColor = (position) => {
   }
 }
 
+/**
+ * Get color for form rating chip.
+ * @param {number} form - Form rating
+ * @returns {string} Vuetify color name
+ */
 const getFormColor = (form) => {
   const f = parseFloat(form)
   if (f >= 7) return 'success'
@@ -430,6 +473,11 @@ const getFormColor = (form) => {
   return 'error'
 }
 
+/**
+ * Get color for ownership progress bar.
+ * @param {number} ownership - Ownership percentage
+ * @returns {string} Vuetify color name
+ */
 const getOwnershipColor = (ownership) => {
   const o = parseFloat(ownership)
   if (o >= 30) return 'error'
@@ -438,6 +486,11 @@ const getOwnershipColor = (ownership) => {
   return 'grey'
 }
 
+/**
+ * Get icon for player status.
+ * @param {string} status - Player status code
+ * @returns {string} Material Design icon name
+ */
 const getStatusIcon = (status) => {
   switch(status) {
     case 'i': return 'mdi-ambulance'
@@ -447,6 +500,11 @@ const getStatusIcon = (status) => {
   }
 }
 
+/**
+ * Get color for status icon.
+ * @param {string} status - Player status code
+ * @returns {string} Vuetify color name
+ */
 const getStatusColor = (status) => {
   switch(status) {
     case 'i': return 'error'
@@ -456,6 +514,11 @@ const getStatusColor = (status) => {
   }
 }
 
+/**
+ * Get human-readable status text.
+ * @param {string} status - Player status code
+ * @returns {string} Status description
+ */
 const getStatusText = (status) => {
   switch(status) {
     case 'i': return 'Injured'
@@ -466,15 +529,18 @@ const getStatusText = (status) => {
   }
 }
 
-// Поиск с задержкой
+// Search functionality with debouncing
 let searchTimeout = null
 const performSearch = () => {
   clearTimeout(searchTimeout)
   searchTimeout = setTimeout(() => {
-    // Поиск выполняется через computed tableData
+    // Search is performed automatically via computed tableData
   }, 300)
 }
 
+/**
+ * Reset all filter values to defaults.
+ */
 const resetFilters = () => {
   search.value = ''
   filterPosition.value = []
@@ -482,6 +548,12 @@ const resetFilters = () => {
   filterStatus.value = null
 }
 
+// Debug watcher for sort changes
+watch(sortBy, (newVal) => {
+  console.log('Sort changed:', newVal)
+}, { deep: true })
+
+// Initialize data on component mount
 onMounted(() => {
   fetchPlayers()
   fetchTeams()
@@ -489,6 +561,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Modern table styling */
 .modern-table :deep(.v-data-table__th) {
   background-color: rgb(var(--v-theme-primary)) !important;
   color: white !important;

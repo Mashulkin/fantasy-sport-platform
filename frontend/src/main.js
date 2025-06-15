@@ -1,7 +1,14 @@
+/**
+ * Vue.js application entry point.
+ * 
+ * Configures and initializes the main Vue application with
+ * Vuetify UI framework, Pinia state management, and routing.
+ */
+
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
-// Vuetify
+// Vuetify UI framework imports
 import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
@@ -11,7 +18,7 @@ import '@mdi/font/css/materialdesignicons.css'
 import App from './App.vue'
 import router from './router'
 
-// Create Vuetify instance
+// Create Vuetify instance with custom theme configuration
 const vuetify = createVuetify({
   components,
   directives,
@@ -33,10 +40,12 @@ const vuetify = createVuetify({
   }
 })
 
+// Create and configure Vue application
 const app = createApp(App)
 
-app.use(createPinia())
-app.use(router)
-app.use(vuetify)
+app.use(createPinia())  // State management
+app.use(router)         // Client-side routing
+app.use(vuetify)        // UI framework
 
+// Mount application to DOM
 app.mount('#app')

@@ -1,6 +1,12 @@
+<!--
+  Admin layout component with authentication guard.
+  
+  Provides access control for admin routes, ensuring only
+  authenticated superusers can access admin functionality.
+-->
 <template>
   <div>
-    <!-- Loading state -->
+    <!-- Loading state during authentication check -->
     <v-container v-if="loading" class="fill-height">
       <v-row align="center" justify="center">
         <v-col cols="12" class="text-center">
@@ -14,10 +20,10 @@
       </v-row>
     </v-container>
     
-    <!-- Authorized content -->
+    <!-- Admin content for authorized users -->
     <router-view v-else-if="isAuthenticated && isSuperuser" />
     
-    <!-- Unauthorized message -->
+    <!-- Access denied message for unauthorized users -->
     <v-container v-else class="fill-height">
       <v-row align="center" justify="center">
         <v-col cols="12" sm="8" md="6">
@@ -66,22 +72,24 @@ const router = useRouter()
 const authStore = useAuthStore()
 const loading = ref(true)
 
+// Computed properties for authentication state
 const isAuthenticated = computed(() => authStore.isLoggedIn)
 const isSuperuser = computed(() => authStore.user?.is_superuser === true)
 
+/**
+ * Check authentication and authorization on component mount.
+ */
 onMounted(async () => {
   try {
-    // Проверяем авторизацию при загрузке
+    // Fetch user data if token exists but user data is missing
     if (authStore.token && !authStore.user) {
       await authStore.fetchUser()
     }
     
-    // Проверяем права доступа
+    // Redirect based on authentication status
     if (!isAuthenticated.value) {
-      // Если не авторизован, редиректим на логин
       await router.push('/login')
     } else if (!isSuperuser.value) {
-      // Если авторизован, но не суперпользователь
       console.log('User is not superuser:', authStore.user)
     }
   } catch (error) {

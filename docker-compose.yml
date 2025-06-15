@@ -1,6 +1,12 @@
+# Docker Compose configuration for Fantasy Sports Platform.
+
+# Defines all services including backend API, frontend, databases,
+# Celery workers, and monitoring tools for local development.
+
 version: '3.8'
 
 services:
+  # FastAPI backend application
   backend:
     build: ./backend
     container_name: fantasy_backend
@@ -21,6 +27,7 @@ services:
       - ./backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
+  # Celery worker for background tasks
   celery_worker:
     build: ./backend
     container_name: fantasy_celery_worker
@@ -38,8 +45,10 @@ services:
       - backend
     volumes:
       - ./backend:/app
+    # Use solo pool for Windows compatibility, prefork for Linux
     command: celery -A app.worker worker --loglevel=info --pool=solo --max-tasks-per-child=10
 
+  # Celery beat scheduler for periodic tasks
   celery_beat:
     build: ./backend
     container_name: fantasy_celery_beat
@@ -61,6 +70,7 @@ services:
       - celery_beat_data:/tmp
     command: celery -A app.worker beat --loglevel=info -s /tmp/celerybeat-schedule --pidfile=/tmp/celerybeat.pid
 
+  # Vue.js frontend application
   frontend:
     build: ./frontend
     container_name: fantasy_frontend
@@ -73,6 +83,7 @@ services:
       - VITE_API_URL=http://fantasy.local
     command: npm run dev
 
+  # PostgreSQL database
   db:
     image: postgres:15-alpine
     container_name: fantasy_db
@@ -85,6 +96,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  # Redis for Celery message broker
   redis:
     image: redis:7-alpine
     container_name: fantasy_redis
@@ -93,6 +105,7 @@ services:
     volumes:
       - redis_data:/data
 
+  # Flower for Celery monitoring
   flower:
     build: ./backend
     container_name: fantasy_flower
@@ -113,6 +126,7 @@ services:
       - ./backend:/app
     command: celery -A app.worker flower --port=5555
 
+  # Nginx reverse proxy
   nginx:
     build: ./nginx
     container_name: fantasy_nginx
@@ -125,6 +139,6 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
 
 volumes:
-  postgres_data:
-  redis_data:
-  celery_beat_data:
+  postgres_data:      # Persistent database storage
+  redis_data:         # Persistent Redis storage
+  celery_beat_data:   # Persistent Celery Beat schedule storage

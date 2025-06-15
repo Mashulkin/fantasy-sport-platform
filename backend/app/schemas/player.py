@@ -1,9 +1,17 @@
+"""
+Pydantic schemas for player data models.
+
+Defines request/response schemas for player information,
+platform profiles, and team associations.
+"""
+
 from typing import Optional, List
 from datetime import date, datetime
 from pydantic import BaseModel
 
 
 class PlayerBase(BaseModel):
+    """Base schema for player information."""
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     web_name: Optional[str] = None
@@ -12,14 +20,17 @@ class PlayerBase(BaseModel):
 
 
 class PlayerCreate(PlayerBase):
+    """Schema for creating new players."""
     pass
 
 
 class PlayerUpdate(PlayerBase):
+    """Schema for updating existing players."""
     pass
 
 
 class Player(PlayerBase):
+    """Schema for player response."""
     id: int
     created_at: datetime
     updated_at: datetime
@@ -29,6 +40,7 @@ class Player(PlayerBase):
 
 
 class TeamBase(BaseModel):
+    """Base schema for team information in player context."""
     id: int
     name: str
     abbreviation: Optional[str] = None
@@ -39,6 +51,7 @@ class TeamBase(BaseModel):
 
 
 class PlayerPlatformProfileBase(BaseModel):
+    """Base schema for player platform profiles."""
     platform: str
     platform_player_id: Optional[str] = None
     custom_name: Optional[str] = None
@@ -53,6 +66,7 @@ class PlayerPlatformProfileBase(BaseModel):
 
 
 class PlayerPlatformProfile(PlayerPlatformProfileBase):
+    """Schema for player platform profile response."""
     id: int
     player_id: int
     team_id: Optional[int] = None
@@ -65,6 +79,7 @@ class PlayerPlatformProfile(PlayerPlatformProfileBase):
 
 
 class PlayerWithProfiles(Player):
+    """Schema for player with all platform profiles."""
     platform_profiles: List[PlayerPlatformProfile] = []
     
     class Config:

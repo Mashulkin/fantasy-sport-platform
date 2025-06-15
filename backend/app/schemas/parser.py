@@ -1,9 +1,17 @@
+"""
+Pydantic schemas for parser configuration and logging.
+
+Defines request/response models for parser management endpoints
+including configuration, execution logs, and task status.
+"""
+
 from typing import Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel
 
 
 class ParserConfigBase(BaseModel):
+    """Base schema for parser configuration."""
     name: str
     platform: Optional[str] = None
     parser_type: str
@@ -13,10 +21,12 @@ class ParserConfigBase(BaseModel):
 
 
 class ParserConfigCreate(ParserConfigBase):
+    """Schema for creating new parser configurations."""
     pass
 
 
 class ParserConfigUpdate(BaseModel):
+    """Schema for updating existing parser configurations."""
     name: Optional[str] = None
     platform: Optional[str] = None
     parser_type: Optional[str] = None
@@ -26,6 +36,7 @@ class ParserConfigUpdate(BaseModel):
 
 
 class ParserConfig(ParserConfigBase):
+    """Schema for parser configuration response."""
     id: int
     last_run: Optional[datetime] = None
     last_status: Optional[str] = None
@@ -37,6 +48,7 @@ class ParserConfig(ParserConfigBase):
 
 
 class ParserLog(BaseModel):
+    """Schema for parser execution logs."""
     id: int
     parser_config_id: int
     started_at: Optional[datetime]
@@ -51,6 +63,7 @@ class ParserLog(BaseModel):
 
 
 class ParserRunResponse(BaseModel):
+    """Schema for parser execution response."""
     status: str
     parser_id: int
     parser_name: str

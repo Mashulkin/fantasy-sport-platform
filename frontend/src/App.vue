@@ -1,11 +1,15 @@
+<!-- 
+  Main application component with navigation and layout structure.
+  
+  Provides the root layout including navigation drawer, app bar,
+  and main content area with authentication-aware menu items.
+-->
 <template>
   <v-app>
-    <!-- Navigation Drawer -->
-    <v-navigation-drawer
-      v-model="drawer"
-      app
-    >
+    <!-- Side navigation drawer -->
+    <v-navigation-drawer v-model="drawer" app>
       <v-list>
+        <!-- User info section -->
         <v-list-item
           v-if="authStore.isLoggedIn"
           prepend-avatar="https://randomuser.me/api/portraits/men/85.jpg"
@@ -21,6 +25,7 @@
 
       <v-divider></v-divider>
 
+      <!-- Navigation menu -->
       <v-list density="compact" nav>
         <v-list-item
           v-for="item in menuItems"
@@ -32,13 +37,14 @@
       </v-list>
     </v-navigation-drawer>
 
-    <!-- App Bar -->
+    <!-- Top application bar -->
     <v-app-bar app>
       <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
       <v-toolbar-title>Fantasy Sports Platform</v-toolbar-title>
       
       <v-spacer></v-spacer>
 
+      <!-- Login button for unauthenticated users -->
       <v-btn 
         v-if="!authStore.isLoggedIn"
         color="primary"
@@ -47,6 +53,7 @@
         Login
       </v-btn>
       
+      <!-- User menu for authenticated users -->
       <v-menu v-else>
         <template v-slot:activator="{ props }">
           <v-btn icon v-bind="props">
@@ -61,7 +68,7 @@
       </v-menu>
     </v-app-bar>
 
-    <!-- Main Content -->
+    <!-- Main content area -->
     <v-main>
       <v-container fluid>
         <router-view></router-view>
@@ -79,6 +86,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const drawer = ref(true)
 
+// Navigation menu items configuration
 const menuItems = [
   { title: 'Dashboard', icon: 'mdi-view-dashboard', route: '/' },
   { title: 'Players', icon: 'mdi-account-group', route: '/players' },
@@ -88,12 +96,15 @@ const menuItems = [
   { title: 'Admin', icon: 'mdi-cog', route: '/admin' },
 ]
 
+/**
+ * Handle user logout and redirect to login page.
+ */
 const handleLogout = () => {
   authStore.logout()
   router.push('/login')
 }
 
-// Check if user is logged in on app start
+// Check authentication status on app initialization
 if (authStore.token) {
   authStore.fetchUser()
 }
