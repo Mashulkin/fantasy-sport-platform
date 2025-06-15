@@ -11,13 +11,14 @@
       </v-card-title>
 
       <v-card-text>
-        <!-- Parsers Table -->
+        <!-- Data table displaying all configured parsers with their status and controls -->
         <v-data-table
           :headers="headers"
           :items="parsers"
           :loading="loading"
           class="elevation-1"
         >
+          <!-- Custom template for active status column with colored chips -->
           <template v-slot:item.is_active="{ item }">
             <v-chip
               :color="item.is_active ? 'success' : 'error'"
@@ -27,6 +28,7 @@
             </v-chip>
           </template>
 
+          <!-- Custom template for last execution status with appropriate colors -->
           <template v-slot:item.last_status="{ item }">
             <v-chip
               v-if="item.last_status"
@@ -38,11 +40,14 @@
             <span v-else>-</span>
           </template>
 
+          <!-- Format last run timestamp for display -->
           <template v-slot:item.last_run="{ item }">
             {{ formatDate(item.last_run) }}
           </template>
 
+          <!-- Action buttons for each parser row -->
           <template v-slot:item.actions="{ item }">
+            <!-- Run parser button with loading indicator -->
             <v-btn
               icon
               size="small"
@@ -52,6 +57,7 @@
             >
               <v-icon>mdi-play</v-icon>
             </v-btn>
+            <!-- View logs button -->
             <v-btn
               icon
               size="small"
@@ -60,6 +66,7 @@
             >
               <v-icon>mdi-text-box-outline</v-icon>
             </v-btn>
+            <!-- Edit parser button -->
             <v-btn
               icon
               size="small"
@@ -73,13 +80,14 @@
       </v-card-text>
     </v-card>
 
-    <!-- Create/Edit Dialog -->
+    <!-- Create/Edit Parser Dialog -->
     <v-dialog v-model="showCreateDialog" max-width="600px">
       <v-card>
         <v-card-title>
           <span class="text-h5">{{ editingParser ? 'Edit' : 'Create' }} Parser</span>
         </v-card-title>
         <v-card-text>
+          <!-- Parser configuration form -->
           <v-form ref="form">
             <v-text-field
               v-model="parserForm.name"
@@ -121,13 +129,14 @@
       </v-card>
     </v-dialog>
 
-    <!-- Logs Dialog -->
+    <!-- Parser Execution Logs Dialog -->
     <v-dialog v-model="showLogsDialog" max-width="800px">
       <v-card>
         <v-card-title>
           Parser Logs: {{ selectedParser?.name }}
         </v-card-title>
         <v-card-text>
+          <!-- Display list of parser execution logs -->
           <v-list>
             <v-list-item v-for="log in logs" :key="log.id">
               <v-list-item-title>
@@ -137,6 +146,7 @@
                 Records: {{ log.records_processed || 0 }}, 
                 Errors: {{ log.errors_count || 0 }}
               </v-list-item-subtitle>
+              <!-- Expandable section for detailed log data -->
               <div v-if="log.log_data" class="mt-2">
                 <v-expansion-panels flat>
                   <v-expansion-panel>
@@ -163,9 +173,10 @@
 import { ref, onMounted } from 'vue'
 import apiClient from '@/api/client'
 
+// Reactive state variables
 const loading = ref(false)
 const parsers = ref([])
-const runningParsers = ref([])
+const runningParsers = ref([])  // Track which parsers are currently executing
 const showCreateDialog = ref(false)
 const showLogsDialog = ref(false)
 const editingParser = ref(null)
@@ -173,8 +184,10 @@ const selectedParser = ref(null)
 const logs = ref([])
 const parserTypes = ref([])
 
+// Supported fantasy platforms
 const platforms = ['FPL', 'FANTEAM', 'SORARE', 'FANTON']
 
+// Data table column configuration
 const headers = [
   { title: 'Name', key: 'name' },
   { title: 'Platform', key: 'platform' },
@@ -186,6 +199,7 @@ const headers = [
   { title: 'Actions', key: 'actions', sortable: false }
 ]
 
+// Form data for parser creation/editing
 const parserForm = ref({
   name: '',
   platform: '',
@@ -194,6 +208,10 @@ const parserForm = ref({
   is_active: true
 })
 
+/**
+ * Fetch all parsers from the API
+ * Updates the parsers list with current data from the server
+ */
 const fetchParsers = async () => {
   loading.value = true
   try {
@@ -202,13 +220,17 @@ const fetchParsers = async () => {
     parsers.value = response.data
   } catch (error) {
     console.error('Failed to fetch parsers:', error)
-    // Показываем ошибку пользователю
+    // Show error to user with fallback for better UX
     alert('Failed to load parsers. Check console for details.')
   } finally {
     loading.value = false
   }
 }
 
+/**
+ * Fetch available parser types from the API
+ * Populates the parser type dropdown in the form
+ */
 const fetchParserTypes = async () => {
   try {
     const response = await apiClient.get('/parsers/types')
@@ -218,6 +240,12 @@ const fetchParserTypes = async () => {
   }
 }
 
+/**
+ * Execute a parser and monitor its progress
+ * Handles the complete lifecycle of parser execution including status polling
+ * 
+ * @param {Object} parser - Parser configuration object to execute
+ */
 const runParser = async (parser) => {
   console.log(`Starting parser ${parser.name} (ID: ${parser.id})`)
   runningParsers.value.push(parser.id)
@@ -225,12 +253,13 @@ const runParser = async (parser) => {
   let timeoutId = null
   
   try {
+    // Start parser execution
     const response = await apiClient.post(`/parsers/${parser.id}/run`)
     const { task_id } = response.data
     
     console.log(`Parser ${parser.name} started with task ID: ${task_id}`)
     
-    // Check task status periodically
+    // Poll task status every 2 seconds until completion
     let checkCount = 0
     checkInterval = setInterval(async () => {
       checkCount++
@@ -245,10 +274,11 @@ const runParser = async (parser) => {
           failed
         })
         
+        // Task completed - clean up and update UI
         if (ready) {
           console.log(`Task ${task_id} completed. Cleaning up...`)
           
-          // Clear intervals and remove from running list
+          // Clear polling intervals
           if (checkInterval) {
             clearInterval(checkInterval)
             checkInterval = null
@@ -258,29 +288,31 @@ const runParser = async (parser) => {
             timeoutId = null
           }
           
+          // Remove parser from running list
           const index = runningParsers.value.indexOf(parser.id)
           if (index > -1) {
             runningParsers.value.splice(index, 1)
             console.log(`Removed parser ${parser.id} from running list`)
           }
           
+          // Log completion status
           if (successful) {
             console.log(`Parser ${parser.name} completed successfully`)
           } else if (failed) {
             console.error(`Parser ${parser.name} failed`)
           }
           
-          // Refresh parsers data
+          // Refresh parsers data to show updated status
           console.log('Refreshing parsers data...')
           await fetchParsers()
         }
       } catch (error) {
         console.error(`Error checking task status (attempt ${checkCount}):`, error)
-        // Don't clear interval here, let timeout handle it
+        // Continue polling, let timeout handle cleanup if needed
       }
-    }, 2000) // Check every 2 seconds
+    }, 2000)
     
-    // Stop checking after 5 minutes and ensure spinner is removed
+    // Timeout handler - stop polling after 5 minutes to prevent infinite loops
     timeoutId = setTimeout(() => {
       console.log(`Timeout reached for parser ${parser.name}. Stopping status checks.`)
       
@@ -289,19 +321,20 @@ const runParser = async (parser) => {
         checkInterval = null
       }
       
+      // Remove from running list
       const index = runningParsers.value.indexOf(parser.id)
       if (index > -1) {
         runningParsers.value.splice(index, 1)
         console.log(`Removed parser ${parser.id} from running list due to timeout`)
       }
       
-      // Refresh data
+      // Refresh data to show current state
       fetchParsers()
-    }, 300000) // 5 minutes
+    }, 300000) // 5 minutes timeout
     
   } catch (error) {
     console.error('Failed to start parser:', error)
-    // Ensure we remove from running list on error
+    // Ensure cleanup on error
     const index = runningParsers.value.indexOf(parser.id)
     if (index > -1) {
       runningParsers.value.splice(index, 1)
@@ -309,6 +342,12 @@ const runParser = async (parser) => {
   }
 }
 
+/**
+ * Display execution logs for a specific parser
+ * Fetches and shows historical execution data in a dialog
+ * 
+ * @param {Object} parser - Parser object to show logs for
+ */
 const showLogs = async (parser) => {
   selectedParser.value = parser
   try {
@@ -320,17 +359,29 @@ const showLogs = async (parser) => {
   }
 }
 
+/**
+ * Open edit dialog with parser data pre-filled
+ * Prepares the form for editing an existing parser configuration
+ * 
+ * @param {Object} parser - Parser object to edit
+ */
 const editParser = (parser) => {
   editingParser.value = parser
   parserForm.value = { ...parser }
   showCreateDialog.value = true
 }
 
+/**
+ * Save parser configuration (create new or update existing)
+ * Handles both creation and update operations based on edit state
+ */
 const saveParser = async () => {
   try {
     if (editingParser.value) {
+      // Update existing parser
       await apiClient.put(`/parsers/${editingParser.value.id}`, parserForm.value)
     } else {
+      // Create new parser
       await apiClient.post('/parsers', parserForm.value)
     }
     closeDialog()
@@ -340,6 +391,10 @@ const saveParser = async () => {
   }
 }
 
+/**
+ * Close the create/edit dialog and reset form state
+ * Cleans up form data and editing state
+ */
 const closeDialog = () => {
   showCreateDialog.value = false
   editingParser.value = null
@@ -352,11 +407,25 @@ const closeDialog = () => {
   }
 }
 
+/**
+ * Format date for display in the UI
+ * Converts ISO date strings to localized format
+ * 
+ * @param {string|null} date - ISO date string or null
+ * @returns {string} Formatted date or dash if no date
+ */
 const formatDate = (date) => {
   if (!date) return '-'
   return new Date(date).toLocaleString()
 }
 
+/**
+ * Get appropriate color for parser execution status
+ * Maps status strings to Vuetify color names for consistent UI
+ * 
+ * @param {string} status - Parser execution status
+ * @returns {string} Vuetify color name
+ */
 const getStatusColor = (status) => {
   switch (status) {
     case 'success': return 'success'
@@ -366,6 +435,7 @@ const getStatusColor = (status) => {
   }
 }
 
+// Initialize component data when mounted
 onMounted(() => {
   fetchParsers()
   fetchParserTypes()
